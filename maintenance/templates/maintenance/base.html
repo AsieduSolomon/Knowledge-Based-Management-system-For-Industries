@@ -13,8 +13,11 @@
     <nav class="navbar">
         <div class="container">
             <a href="{% url 'dashboard' %}" class="navbar-brand">DKMS</a>
+            <button type="button" class="navbar-toggle" id="navbarToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navbarMenu">
+                <i class="fas fa-bars"></i>
+            </button>
             {% if user.is_authenticated %}
-            <div class="navbar-menu">
+            <div class="navbar-menu" id="navbarMenu">
                 <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}nav-active{% endif %}">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
@@ -51,7 +54,7 @@
                 </form>
             </div>
             {% else %}
-            <div class="navbar-menu">
+            <div class="navbar-menu" id="navbarMenu">
                 <a href="{% url 'login' %}">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -118,7 +121,67 @@
         .navbar-menu a:hover .fa-bell {
             color: var(--primary-color);
         }
+
+        .navbar-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--dark-text);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .navbar .container {
+                flex-wrap: wrap;
+            }
+
+            .navbar-toggle {
+                display: flex;
+            }
+
+            .navbar-menu {
+                display: none;
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                gap: 0;
+                border-top: 1px solid var(--border-color);
+                margin-top: 0.5rem;
+                padding-top: 0.5rem;
+            }
+
+            .navbar-menu.navbar-menu-open {
+                display: flex;
+            }
+
+            .navbar-menu a,
+            .navbar-menu .navbar-link-button {
+                width: 100%;
+                padding: 0.75rem 0.5rem;
+                justify-content: flex-start;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+        }
     </style>
+
+    <script>
+        const navbarToggle = document.getElementById('navbarToggle');
+        const navbarMenu = document.getElementById('navbarMenu');
+        if (navbarToggle && navbarMenu) {
+            navbarToggle.addEventListener('click', function() {
+                const isOpen = navbarMenu.classList.toggle('navbar-menu-open');
+                navbarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+    </script>
 
     <script>
         {% if user.is_authenticated %}

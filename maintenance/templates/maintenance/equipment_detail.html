@@ -1,0 +1,461 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
+    <div>
+        <a href="{% url 'equipment_list' %}" style="color: var(--primary-color); text-decoration: none;">← Back to Equipment</a>
+        <h1 style="font-size: 1.875rem; font-weight: 700; margin-top: 0.5rem;">{{ equipment.name }}</h1>
+        <p><span class="badge badge-primary">{{ equipment.get_equipment_type_display }}</span> located at {{ equipment.location }}</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{% url 'equipment_update' equipment.id %}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'maintenance_log_create' %}" class="btn btn-success">Add Log</a>
+        <button type="button" class="btn btn-warning" onclick="openRecordingModal()">
+            <i class="fas fa-microphone"></i> Record
+        </button>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <div class="card-header"><h3>Equipment Details</h3></div>
+        <div class="card-body">
+            <p><strong>Manufacturer:</strong> {{ equipment.manufacturer|default:"Not specified" }}</p>
+            <p><strong>Model Number:</strong> {{ equipment.model_number|default:"Not specified" }}</p>
+            <p><strong>Installation Date:</strong> {{ equipment.installation_date|default:"Not specified" }}</p>
+            <p><strong>Created By:</strong> {{ equipment.created_by.get_full_name|default:equipment.created_by.username }}</p>
+            <p><strong>Notes:</strong> {{ equipment.notes|default:"No notes" }}</p>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>Documentation Completeness</h3></div>
+        <div class="card-body">
+            <div class="progress" style="margin-bottom: 0.5rem;">
+                <div class="progress-bar" style="width: {{ documentation_completeness }}%;"></div>
+            </div>
+            <p>{{ documentation_completeness }}% complete</p>
+            <button type="button" class="btn btn-secondary" onclick="openUploadModal()">Upload Media</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>Maintenance Logs</h3></div>
+    <div class="card-body">
+        {% if logs %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Type</th><th>Description</th><th>Time (min)</th><th>Engineer</th><th>Media</th></tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.date_performed|date:"Y-m-d H:i" }}</td>
+                        <td><span class="badge badge-primary">{{ log.get_activity_type_display }}</span></td>
+                        <td>{{ log.description|truncatewords:15 }}</td>
+                        <td>{{ log.time_taken_minutes }}</td>
+                        <td>{{ log.performed_by.get_full_name|default:log.performed_by.username }}</td>
+                        <td>
+                            {% if log.multimedia_files.count %}
+                            <span class="badge badge-info">{{ log.multimedia_files.count }} files</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>No maintenance logs recorded for this equipment.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Multimedia Files</h3>
+            <button type="button" class="btn btn-secondary" onclick="openUploadModal()" style="font-size: 0.875rem;">+ Upload</button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if multimedia %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+            {% for media in multimedia %}
+            <div style="border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span class="badge 
+                        {% if media.media_type == 'audio' %}badge-warning
+                        {% elif media.media_type == 'video' %}badge-danger
+                        {% elif media.media_type == 'diagram' %}badge-primary
+                        {% else %}badge-secondary{% endif %}">
+                        <i class="fas {% if media.media_type == 'audio' %}fa-microphone{% elif media.media_type == 'video' %}fa-video{% elif media.media_type == 'diagram' %}fa-project-diagram{% else %}fa-file{% endif %}"></i>
+                        {{ media.get_media_type_display }}
+                    </span>
+                    <small style="color: var(--light-text);">{{ media.uploaded_at|date:"Y-m-d" }}</small>
+                </div>
+                
+                {% if media.maintenance_log %}
+                <small style="color: var(--primary-color);">Related to: {{ media.maintenance_log.get_activity_type_display }} on {{ media.maintenance_log.date_performed|date:"Y-m-d" }}</small>
+                {% endif %}
+                
+                <p style="font-size: 0.875rem; margin-bottom: 0.75rem;">{{ media.description|default:"No description" }}</p>
+                
+                {% if media.is_audio %}
+                <audio controls style="width: 100%; margin-top: 0.5rem;">
+                    <source src="{{ media.file.url }}" type="audio/mpeg">
+                    <source src="{{ media.file.url }}" type="audio/wav">
+                    <source src="{{ media.file.url }}" type="audio/webm">
+                    Your browser does not support the audio element.
+                </audio>
+                <div style="margin-top: 0.5rem;">
+                    <a href="{{ media.file.url }}" download class="btn btn-outline" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Download</a>
+                </div>
+                
+                {% elif media.is_video %}
+                <video controls style="width: 100%; max-height: 200px; margin-top: 0.5rem; border-radius: 0.25rem;">
+                    <source src="{{ media.file.url }}" type="video/mp4">
+                    <source src="{{ media.file.url }}" type="video/webm">
+                    Your browser does not support the video element.
+                </video>
+                <div style="margin-top: 0.5rem;">
+                    <a href="{{ media.file.url }}" download class="btn btn-outline" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Download</a>
+                </div>
+                
+                {% elif media.is_image %}
+                <a href="{{ media.file.url }}" target="_blank">
+                    <img src="{{ media.file.url }}" alt="{{ media.description }}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 0.25rem; margin-top: 0.5rem;">
+                </a>
+                <div style="margin-top: 0.5rem;">
+                    <a href="{{ media.file.url }}" target="_blank" class="btn btn-outline" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">View Full Size</a>
+                    <a href="{{ media.file.url }}" download class="btn btn-outline" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Download</a>
+                </div>
+                
+                {% else %}
+                <div style="margin-top: 0.5rem;">
+                    <a href="{{ media.file.url }}" target="_blank" class="btn btn-outline" style="font-size: 0.75rem;">View Document</a>
+                    <a href="{{ media.file.url }}" download class="btn btn-outline" style="font-size: 0.75rem;">Download</a>
+                </div>
+                {% endif %}
+                
+                <div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--light-text);">
+                    Uploaded by: {{ media.uploaded_by.get_full_name|default:media.uploaded_by.username }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No multimedia files uploaded. Click the Upload button to add images, wiring diagrams, audio notes, or video recordings.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 90%; overflow: auto;">
+        <div style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Upload File</h3>
+                <button onclick="closeUploadModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="equipment_id" value="{{ equipment.id }}">
+                <div class="form-group">
+                    <label>Media Type</label>
+                    <select name="media_type" id="uploadMediaType" class="form-control" required>
+                        <option value="audio">Audio Recording</option>
+                        <option value="video">Video Recording</option>
+                        <option value="image">Image</option>
+                        <option value="diagram">Wiring Diagram</option>
+                        <option value="document">Document</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Related Maintenance Log (Optional)</label>
+                    <select name="maintenance_log_id" class="form-control">
+                        <option value="">None</option>
+                        {% for log in logs %}
+                        <option value="{{ log.id }}">{{ log.get_activity_type_display }} - {{ log.date_performed|date:"Y-m-d" }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>File</label>
+                    <input type="file" name="file" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Recording Modal -->
+<div id="recordingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 0.75rem; max-width: 600px; width: 90%; max-height: 90%; overflow: auto;">
+        <div style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Record Audio or Video</h3>
+                <button onclick="closeRecordingModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Recording Type</label>
+                <select id="recordMediaType" class="form-control">
+                    <option value="audio">Audio Only</option>
+                    <option value="video">Video with Audio</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Related Maintenance Log (Optional)</label>
+                <select id="recordMaintenanceLogId" class="form-control">
+                    <option value="">None</option>
+                    {% for log in logs %}
+                    <option value="{{ log.id }}">{{ log.get_activity_type_display }} - {{ log.date_performed|date:"Y-m-d" }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="recordDescription" class="form-control" rows="2" placeholder="What is this recording about?"></textarea>
+            </div>
+            
+            <div id="recordingArea" style="margin-top: 1rem;">
+                <video id="videoPreview" autoplay muted style="width: 100%; max-height: 250px; background: #000; border-radius: 0.5rem; display: none;"></video>
+                
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button type="button" id="modalStartRecordBtn" class="btn btn-danger" disabled>
+                        <i class="fas fa-circle"></i> Start
+                    </button>
+                    <button type="button" id="modalStopRecordBtn" class="btn btn-secondary" disabled>
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                    <button type="button" id="modalSaveRecordBtn" class="btn btn-primary" disabled>
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+                
+                <div id="modalRecordingStatus" style="margin-top: 1rem; padding: 0.5rem; background: var(--light-bg); border-radius: 0.5rem; display: none;">
+                    <span id="modalStatusText"></span>
+                </div>
+                
+                <div id="modalPlaybackArea" style="margin-top: 1rem; display: none;">
+                    <p><strong>Preview:</strong></p>
+                    <audio id="audioPlayback" controls style="width: 100%;"></audio>
+                    <video id="videoPlayback" controls style="width: 100%; max-height: 200px; display: none;"></video>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let mediaRecorder;
+    let recordedChunks = [];
+    let stream = null;
+    let recordingType = 'audio';
+    let recordedBlob = null;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openUploadModal() {
+        document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function closeUploadModal() {
+        document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    function openRecordingModal() {
+        document.getElementById('recordingModal').style.display = 'flex';
+        initModalMedia();
+    }
+
+    function closeRecordingModal() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('recordingModal').style.display = 'none';
+    }
+
+    async function initModalMedia() {
+        const mediaTypeSelect = document.getElementById('recordMediaType');
+        recordingType = mediaTypeSelect.value;
+        
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = recordingType === 'audio' 
+            ? { audio: true, video: false }
+            : { audio: true, video: true };
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            const videoPreview = document.getElementById('videoPreview');
+            if (recordingType === 'video') {
+                videoPreview.style.display = 'block';
+                videoPreview.srcObject = stream;
+            } else {
+                videoPreview.style.display = 'none';
+            }
+            
+            document.getElementById('modalStartRecordBtn').disabled = false;
+            document.getElementById('modalStatusText').textContent = 'Ready to record. Click Start.';
+            document.getElementById('modalRecordingStatus').style.display = 'block';
+        } catch (err) {
+            console.error('Error accessing media devices:', err);
+            document.getElementById('modalStatusText').textContent = 'Error: Cannot access microphone or camera. Please check permissions.';
+            document.getElementById('modalRecordingStatus').style.display = 'block';
+        }
+    }
+
+    function startModalRecording() {
+        recordedChunks = [];
+        
+        const mimeType = recordingType === 'audio' ? 'audio/webm' : 'video/webm';
+        
+        try {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+        } catch (e) {
+            mediaRecorder = new MediaRecorder(stream);
+        }
+        
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = function() {
+            recordedBlob = new Blob(recordedChunks, { type: recordingType === 'audio' ? 'audio/webm' : 'video/webm' });
+            const url = URL.createObjectURL(recordedBlob);
+            
+            if (recordingType === 'audio') {
+                document.getElementById('audioPlayback').src = url;
+                document.getElementById('audioPlayback').style.display = 'block';
+                document.getElementById('videoPlayback').style.display = 'none';
+            } else {
+                document.getElementById('videoPlayback').src = url;
+                document.getElementById('videoPlayback').style.display = 'block';
+                document.getElementById('audioPlayback').style.display = 'none';
+            }
+            
+            document.getElementById('modalPlaybackArea').style.display = 'block';
+            document.getElementById('modalSaveRecordBtn').disabled = false;
+            document.getElementById('modalStatusText').textContent = 'Recording complete. Click Save to upload.';
+        };
+        
+        mediaRecorder.start();
+        document.getElementById('modalStartRecordBtn').disabled = true;
+        document.getElementById('modalStopRecordBtn').disabled = false;
+        document.getElementById('modalSaveRecordBtn').disabled = true;
+        document.getElementById('modalPlaybackArea').style.display = 'none';
+        document.getElementById('modalStatusText').textContent = 'Recording in progress... Click Stop when finished.';
+    }
+
+    function stopModalRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            document.getElementById('modalStopRecordBtn').disabled = true;
+            document.getElementById('modalStatusText').textContent = 'Processing recording...';
+        }
+    }
+
+    async function saveModalRecording() {
+        const equipmentId = {{ equipment.id }};
+        const maintenanceLogId = document.getElementById('recordMaintenanceLogId').value;
+        const description = document.getElementById('recordDescription').value;
+        const mediaType = document.getElementById('recordMediaType').value;
+        
+        if (!recordedBlob) {
+            alert('No recording to save');
+            return;
+        }
+        
+        const formData = new FormData();
+        const fileName = `recording_${Date.now()}.webm`;
+        
+        formData.append('file', new File([recordedBlob], fileName, { type: recordingType === 'audio' ? 'audio/webm' : 'video/webm' }));
+        formData.append('equipment_id', equipmentId);
+        formData.append('media_type', mediaType);
+        formData.append('description', description);
+        if (maintenanceLogId) {
+            formData.append('maintenance_log_id', maintenanceLogId);
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+        
+        try {
+            const response = await fetch('/recordings/upload/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                alert('Recording saved successfully!');
+                location.reload();
+            } else {
+                alert('Error saving recording: ' + (result.message || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Error uploading recording');
+        }
+    }
+
+    document.getElementById('recordMediaType').addEventListener('change', function() {
+        initModalMedia();
+    });
+    document.getElementById('modalStartRecordBtn').addEventListener('click', startModalRecording);
+    document.getElementById('modalStopRecordBtn').addEventListener('click', stopModalRecording);
+    document.getElementById('modalSaveRecordBtn').addEventListener('click', saveModalRecording);
+    
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('equipment_id', {{ equipment.id }});
+        const csrftoken = getCookie('csrftoken');
+        
+        try {
+            const response = await fetch('/recordings/upload/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert('File uploaded successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (err) {
+            alert('Upload error');
+        }
+    });
+</script>
+{% endblock %}

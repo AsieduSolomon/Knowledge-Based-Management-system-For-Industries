@@ -1,0 +1,21 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <h2>Maintenance Log Details</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>Equipment:</strong> <a href="{% url 'equipment_detail' log.equipment.id %}">{{ log.equipment.name }}</a></p>
+            <p><strong>Activity Type:</strong> <span class="badge badge-primary">{{ log.get_activity_type_display }}</span></p>
+            <p><strong>Date Performed:</strong> {{ log.date_performed|date:"Y-m-d H:i" }}</p>
+            <p><strong>Description:</strong></p>
+            <p style="background: var(--light-bg); padding: 1rem; border-radius: 0.5rem;">{{ log.description }}</p>
+            <p><strong>Parts Replaced:</strong> {{ log.parts_replaced|default:"None" }}</p>
+            <p><strong>Time Taken:</strong> {{ log.time_taken_minutes }} minutes</p>
+            <p><strong>Performed By:</strong> {{ log.performed_by.get_full_name|default:log.performed_by.username }}</p>
+            <a href="{% url 'maintenance_log_list' %}" class="btn btn-secondary">Back to Logs</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

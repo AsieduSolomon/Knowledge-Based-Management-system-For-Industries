@@ -1,0 +1,36 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ message.subject }}</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>From:</strong> {{ message.sender.get_full_name|default:message.sender.username }}</p>
+            <p><strong>To:</strong> {{ message.recipient.get_full_name|default:message.recipient.username }}</p>
+            <p><strong>Date:</strong> {{ message.created_at|date:"Y-m-d H:i" }}</p>
+            <div style="background: var(--light-bg); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;">
+                {{ message.body|linebreaks }}
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="{% url 'message_reply' message.id %}" class="btn btn-primary">Reply</a>
+                <a href="{% url 'message_list' %}" class="btn btn-secondary">Back to Inbox</a>
+            </div>
+        </div>
+    </div>
+
+    {% if replies %}
+    <div class="card" style="margin-top: 1rem;">
+        <div class="card-header"><h3>Replies</h3></div>
+        <div class="card-body">
+            {% for reply in replies %}
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                <p><strong>{{ reply.sender.get_full_name|default:reply.sender.username }}</strong> <small style="color: var(--light-text);">{{ reply.created_at|date:"Y-m-d H:i" }}</small></p>
+                <p>{{ reply.body }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

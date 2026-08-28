@@ -1,0 +1,81 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<h1 style="font-size: 1.875rem; font-weight: 700; margin-bottom: 1.5rem;">Dashboard</h1>
+
+<div class="grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ equipment_count }}</div>
+        <div class="stat-label">Equipment Registered</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ logs_last_30_days }}</div>
+        <div class="stat-label">Maintenance Logs (Last 30 Days)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ unread_notifications }}</div>
+        <div class="stat-label">Unread Notifications</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ unread_messages }}</div>
+        <div class="stat-label">Unread Messages</div>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Maintenance Logs</h3>
+        </div>
+        <div class="card-body">
+            {% if recent_logs %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Equipment</th><th>Type</th><th>Date</th><th>Engineer</th><th>Time (min)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td><a href="{% url 'equipment_detail' log.equipment.id %}">{{ log.equipment.name }}</a></td>
+                            <td><span class="badge badge-primary">{{ log.get_activity_type_display }}</span></td>
+                            <td>{{ log.date_performed|date:"Y-m-d H:i" }}</td>
+                            <td>{{ log.performed_by.get_full_name|default:log.performed_by.username }}</td>
+                            <td>{{ log.time_taken_minutes }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No maintenance logs recorded yet.</p>
+            {% endif %}
+            <a href="{% url 'maintenance_log_create' %}" class="btn btn-primary" style="margin-top: 1rem;">Add Maintenance Log</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Low Documentation Equipment</h3>
+            <p style="font-size: 0.875rem; color: var(--light-text); margin-top: 0.25rem;">Equipment needing more documentation</p>
+        </div>
+        <div class="card-body">
+            {% if low_documentation_equipment %}
+                {% for eq in low_documentation_equipment %}
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <a href="{% url 'equipment_detail' eq.id %}">{{ eq.name }}</a>
+                        <span>{{ eq.get_documentation_completeness }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ eq.get_documentation_completeness }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p>All equipment has adequate documentation.</p>
+            {% endif %}
+            <a href="{% url 'equipment_create' %}" class="btn btn-success" style="margin-top: 1rem;">Add New Equipment</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

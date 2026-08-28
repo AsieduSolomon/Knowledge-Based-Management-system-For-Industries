@@ -1,0 +1,52 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1 style="font-size: 1.875rem; font-weight: 700;">Notifications</h1>
+    <button id="markAllRead" class="btn btn-secondary">Mark All as Read</button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if notifications %}
+            {% for notification in notifications %}
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); {% if not notification.is_read %}background-color: #dbeafe;{% endif %}" data-notification-id="{{ notification.id }}">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong>{{ notification.title }}</strong>
+                        <p style="margin: 0.25rem 0; color: var(--light-text);">{{ notification.message }}</p>
+                        <small>{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                        {% if notification.link %}
+                        <a href="{{ notification.link }}" style="display: inline-block; margin-top: 0.5rem;">View →</a>
+                        {% endif %}
+                    </div>
+                    {% if not notification.is_read %}
+                    <button class="btn-mark-read" data-id="{{ notification.id }}" style="background: none; border: none; color: var(--primary-color); cursor: pointer;">Mark Read</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p>No notifications.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.btn-mark-read').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.id;
+            fetch(`/notifications/${notificationId}/read/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'}
+            }).then(() => location.reload());
+        });
+    });
+
+    document.getElementById('markAllRead')?.addEventListener('click', function() {
+        fetch('/notifications/read/all/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        }).then(() => location.reload());
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1 style="font-size: 1.875rem; font-weight: 700;">Messages</h1>
+    <a href="{% url 'message_create' %}" class="btn btn-primary">+ New Message</a>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <div class="card-header"><h3>Inbox</h3></div>
+        <div class="card-body">
+            {% if inbox_messages %}
+                {% for message in inbox_messages %}
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); {% if not message.is_read %}background-color: #dbeafe;{% endif %}">
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong><a href="{% url 'message_detail' message.id %}" style="text-decoration: none; color: var(--dark-text);">{{ message.subject }}</a></strong>
+                        <span style="font-size: 0.75rem; color: var(--light-text);">{{ message.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <p style="font-size: 0.875rem;">From: {{ message.sender.get_full_name|default:message.sender.username }}</p>
+                    <p style="font-size: 0.875rem; color: var(--light-text);">{{ message.body|truncatewords:20 }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p>No messages in your inbox.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>Sent Messages</h3></div>
+        <div class="card-body">
+            {% if sent_messages %}
+                {% for message in sent_messages %}
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong>To: {{ message.recipient.get_full_name|default:message.recipient.username }}</strong>
+                        <span style="font-size: 0.75rem; color: var(--light-text);">{{ message.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <p style="font-size: 0.875rem;"><strong>{{ message.subject }}</strong></p>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p>No sent messages.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

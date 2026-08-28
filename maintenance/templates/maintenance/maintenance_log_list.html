@@ -1,0 +1,64 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<h1 style="font-size: 1.875rem; font-weight: 700; margin-bottom: 1.5rem;">Maintenance Logs</h1>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body">
+        <form method="get" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <input type="text" name="search" placeholder="Search logs..." value="{{ search_query }}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+            <select name="equipment" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                <option value="">All Equipment</option>
+                {% for eq in equipment_list %}
+                <option value="{{ eq.id }}" {% if current_equipment == eq.id|stringformat:"s" %}selected{% endif %}>{{ eq.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="type" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                <option value="">All Types</option>
+                {% for type_code, type_name in activity_types %}
+                <option value="{{ type_code }}" {% if current_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            {% if search_query or current_equipment or current_type %}
+            <a href="{% url 'maintenance_log_list' %}" class="btn btn-secondary">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead><tr><th>Equipment</th><th>Type</th><th>Date</th><th>Description</th><th>Engineer</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td><a href="{% url 'equipment_detail' log.equipment.id %}">{{ log.equipment.name }}</a></td>
+                    <td><span class="badge badge-primary">{{ log.get_activity_type_display }}</span></td>
+                    <td>{{ log.date_performed|date:"Y-m-d H:i" }}</td>
+                    <td>{{ log.description|truncatewords:10 }}</td>
+                    <td>{{ log.performed_by.get_full_name|default:log.performed_by.username }}</td>
+                    <td>{{ log.time_taken_minutes }} min</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="text-align: center;">No maintenance logs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
+    {% if page_obj.has_previous %}
+        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if current_equipment %}&equipment={{ current_equipment }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" class="btn btn-outline">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_equipment %}&equipment={{ current_equipment }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" class="btn btn-outline">Previous</a>
+    {% endif %}
+    <span style="padding: 0.5rem 1rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_equipment %}&equipment={{ current_equipment }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" class="btn btn-outline">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_equipment %}&equipment={{ current_equipment }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" class="btn btn-outline">Last</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

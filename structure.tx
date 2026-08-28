@@ -1,0 +1,43 @@
+dkms_project/
+├── manage.py
+├── dkms_project/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+├── maintenance/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py
+│   ├── urls.py
+│   ├── forms.py
+│   ├── consumers.py
+│   ├── routing.py
+│   ├── templatetags/
+│   │   ├── __init__.py
+│   │   └── custom_filters.py
+│   └── templates/
+│       └── maintenance/
+│           ├── base.html
+│           ├── dashboard.html
+│           ├── equipment_list.html
+│           ├── equipment_detail.html
+│           ├── equipment_form.html
+│           ├── maintenance_log_form.html
+│           ├── maintenance_log_list.html
+│           ├── message_list.html
+│           ├── message_detail.html
+│           ├── notification_list.html
+│           ├── login.html
+│           ├── logout.html
+│           └── profile.html
+├── static/
+│   └── css/
+│       └── style.css
+├── media/
+│   └── (empty, for uploaded files)
+├── requirements.txt
+└── .env

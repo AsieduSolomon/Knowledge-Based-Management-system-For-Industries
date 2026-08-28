@@ -1,0 +1,21 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="max-width: 500px; margin: 2rem auto;">
+    <div class="card">
+        <div class="card-header">
+            <h2>Delete Equipment</h2>
+        </div>
+        <div class="card-body">
+            <p>Are you sure you want to delete "{{ object.name }}"?</p>
+            <p style="color: var(--danger-color);">This action cannot be undone.</p>
+            <form method="post">
+                {% csrf_token %}
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                    <a href="{% url 'equipment_detail' object.pk %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

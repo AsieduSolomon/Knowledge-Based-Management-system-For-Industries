@@ -1,0 +1,259 @@
+{% extends 'maintenance/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <h2>Record Audio or Video</h2>
+            <p>Select equipment and recording type, then press record</p>
+        </div>
+        <div class="card-body">
+            <form id="recordingForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="equipment">Equipment</label>
+                    <select id="equipment" name="equipment" class="form-control" required>
+                        <option value="">Select Equipment</option>
+                        {% for eq in equipment_list %}
+                        <option value="{{ eq.id }}">{{ eq.name }} ({{ eq.get_equipment_type_display }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="mediaType">Recording Type</label>
+                    <select id="mediaType" name="mediaType" class="form-control" required>
+                        <option value="audio">Audio Recording</option>
+                        <option value="video">Video Recording</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description (optional)</label>
+                    <textarea id="description" name="description" class="form-control" rows="2" placeholder="What is this recording about?"></textarea>
+                </div>
+
+                <div id="recordingInterface" style="margin-top: 1.5rem;">
+                    <div id="previewArea" style="margin-bottom: 1rem;">
+                        <video id="videoPreview" autoplay muted style="width: 100%; max-height: 300px; background: #000; border-radius: 0.5rem; display: none;"></video>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button type="button" id="startRecordBtn" class="btn btn-danger" disabled>
+                            <i class="fas fa-circle"></i> Start Recording
+                        </button>
+                        <button type="button" id="stopRecordBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-stop"></i> Stop Recording
+                        </button>
+                        <button type="button" id="saveRecordBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-save"></i> Save Recording
+                        </button>
+                        <button type="button" id="cancelRecordBtn" class="btn btn-outline">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+
+                    <div id="recordingStatus" style="margin-top: 1rem; padding: 0.5rem; background: var(--light-bg); border-radius: 0.5rem; display: none;">
+                        <span id="statusText"></span>
+                    </div>
+
+                    <div id="playbackArea" style="margin-top: 1rem; display: none;">
+                        <p><strong>Preview Recording:</strong></p>
+                        <audio id="audioPlayback" controls style="width: 100%;"></audio>
+                        <video id="videoPlayback" controls style="width: 100%; max-height: 300px; display: none;"></video>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let mediaRecorder;
+    let recordedChunks = [];
+    let stream = null;
+    let recordingType = 'audio';
+    let recordedBlob = null;
+
+    const equipmentSelect = document.getElementById('equipment');
+    const mediaTypeSelect = document.getElementById('mediaType');
+    const startBtn = document.getElementById('startRecordBtn');
+    const stopBtn = document.getElementById('stopRecordBtn');
+    const saveBtn = document.getElementById('saveRecordBtn');
+    const cancelBtn = document.getElementById('cancelRecordBtn');
+    const videoPreview = document.getElementById('videoPreview');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const videoPlayback = document.getElementById('videoPlayback');
+    const playbackArea = document.getElementById('playbackArea');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const statusText = document.getElementById('statusText');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function initMedia() {
+        recordingType = mediaTypeSelect.value;
+        
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = recordingType === 'audio' 
+            ? { audio: true, video: false }
+            : { audio: true, video: true };
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            if (recordingType === 'video') {
+                videoPreview.style.display = 'block';
+                videoPreview.srcObject = stream;
+            } else {
+                videoPreview.style.display = 'none';
+            }
+            
+            startBtn.disabled = false;
+            statusText.textContent = 'Ready to record. Click Start Recording.';
+            recordingStatus.style.display = 'block';
+        } catch (err) {
+            console.error('Error accessing media devices:', err);
+            statusText.textContent = 'Error: Cannot access microphone or camera. Please check permissions.';
+            recordingStatus.style.display = 'block';
+        }
+    }
+
+    function startRecording() {
+        recordedChunks = [];
+        
+        const mimeType = recordingType === 'audio' 
+            ? 'audio/webm' 
+            : 'video/webm';
+        
+        try {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+        } catch (e) {
+            console.error('MediaRecorder error:', e);
+            mediaRecorder = new MediaRecorder(stream);
+        }
+        
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = function() {
+            recordedBlob = new Blob(recordedChunks, { type: recordingType === 'audio' ? 'audio/webm' : 'video/webm' });
+            
+            const url = URL.createObjectURL(recordedBlob);
+            
+            if (recordingType === 'audio') {
+                audioPlayback.src = url;
+                audioPlayback.style.display = 'block';
+                videoPlayback.style.display = 'none';
+            } else {
+                videoPlayback.src = url;
+                videoPlayback.style.display = 'block';
+                audioPlayback.style.display = 'none';
+            }
+            
+            playbackArea.style.display = 'block';
+            saveBtn.disabled = false;
+            statusText.textContent = 'Recording complete. Click Save to upload.';
+        };
+        
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        saveBtn.disabled = true;
+        playbackArea.style.display = 'none';
+        statusText.textContent = 'Recording in progress... Click Stop when finished.';
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            stopBtn.disabled = true;
+            statusText.textContent = 'Processing recording...';
+        }
+    }
+
+    async function saveRecording() {
+        const equipmentId = equipmentSelect.value;
+        const description = document.getElementById('description').value;
+        
+        if (!equipmentId) {
+            alert('Please select equipment');
+            return;
+        }
+        
+        if (!recordedBlob) {
+            alert('No recording to save');
+            return;
+        }
+        
+        const formData = new FormData();
+        const fileExtension = recordingType === 'audio' ? 'webm' : 'webm';
+        const fileName = `recording_${Date.now()}.${fileExtension}`;
+        const fileType = recordingType === 'audio' ? 'audio/webm' : 'video/webm';
+        
+        formData.append('file', new File([recordedBlob], fileName, { type: fileType }));
+        formData.append('equipment_id', equipmentId);
+        formData.append('media_type', recordingType);
+        formData.append('description', description);
+        
+        const csrftoken = getCookie('csrftoken');
+        
+        try {
+            const response = await fetch('/recordings/upload/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                alert('Recording saved successfully!');
+                window.location.href = `/equipment/${equipmentId}/`;
+            } else {
+                alert('Error saving recording: ' + (result.message || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Error uploading recording');
+        }
+    }
+
+    function cancelRecording() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        window.location.href = '/dashboard/';
+    }
+
+    mediaTypeSelect.addEventListener('change', function() {
+        initMedia();
+    });
+
+    startBtn.addEventListener('click', startRecording);
+    stopBtn.addEventListener('click', stopRecording);
+    saveBtn.addEventListener('click', saveRecording);
+    cancelBtn.addEventListener('click', cancelRecording);
+
+    initMedia();
+</script>
+{% endblock %}
